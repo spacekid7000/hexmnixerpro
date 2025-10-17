@@ -1,0 +1,674 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>DATABEND - Audio Designer (Fixed Final)</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;background:#121212;color:#e0e0e0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;-webkit-font-smoothing:antialiased}
+.app{height:100%;display:grid;grid-template-rows:60px 1fr 60px;gap:0}
+
+/* Header */
+.header{background:#1a1a1a;border-bottom:1px solid #333;padding:16px 24px;display:flex;align-items:center;justify-content:space-between}
+.logo{font-size:18px;font-weight:600;letter-spacing:1px}
+.header-right{display:flex;gap:16px;align-items:center;font-size:12px;color:#888}
+
+/* Main */
+.main{display:grid;grid-template-columns:1fr 300px;gap:0;overflow:hidden}
+
+/* Canvas */
+.canvas-area{background:#0a0a0a;position:relative;overflow:hidden;border-right:1px solid #333}
+#canvas{width:100%;height:100%;display:block}
+
+/* Right Panel */
+.panel{background:#1a1a1a;border-left:1px solid #333;display:grid;grid-template-rows:auto 1fr auto;gap:0;overflow:hidden}
+.panel-header{padding:16px;border-bottom:1px solid #333;font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;color:#999}
+.panel-content{overflow-y:auto;padding:16px}
+.panel-content::-webkit-scrollbar{width:6px}
+.panel-content::-webkit-scrollbar-track{background:transparent}
+.panel-content::-webkit-scrollbar-thumb{background:#333;border-radius:3px}
+
+/* Controls */
+.section{margin-bottom:20px}
+.section-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:#999;margin-bottom:10px}
+.control-label{font-size:11px;color:#999;margin-bottom:6px;display:block;text-transform:uppercase;letter-spacing:0.5px}
+
+/* Buttons */
+.btn{padding:10px 14px;background:#0d7377;border:none;color:#fff;font-size:12px;font-weight:600;border-radius:4px;cursor:pointer;transition:all 0.2s;text-transform:uppercase;letter-spacing:0.5px}
+.btn:hover{background:#14a085}
+.btn:active{transform:scale(0.98)}
+.btn-group{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.btn-danger{background:#d32f2f}
+.btn-danger:hover{background:#f32c1e}
+.btn-secondary{background:#424242}
+.btn-secondary:hover{background:#505050}
+
+/* Display */
+.display{background:#242424;border:1px solid #333;padding:8px;border-radius:4px;font-size:11px;color:#aaa;font-family:monospace}
+.display-value{color:#0d7377;font-weight:600}
+
+/* Footer buttons */
+.footer-btn{flex:1;padding:8px;background:#242424;border:1px solid #333;color:#e0e0e0;font-size:11px;font-weight:600;border-radius:4px;cursor:pointer;transition:all 0.2s}
+.footer-btn:hover{background:#2a2a2a;border-color:#444}
+.footer-btn:active{transform:scale(0.95)}
+.footer-btn.primary{background:#0d7377;color:#fff;border-color:#0d7377}
+.footer-btn.primary:hover{background:#14a085}
+
+/* Inputs */
+input[type="range"]{width:100%;height:4px;background:#2a2a2a;border:none;border-radius:2px;-webkit-appearance:none;cursor:pointer}
+input[type="range"]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;background:#0d7377;border-radius:50%;cursor:pointer}
+input[type="number"]{width:100%;padding:8px;background:#242424;border:1px solid #333;color:#e0e0e0;font-size:12px;border-radius:4px}
+</style>
+</head>
+<body>
+<div class="app">
+  <!-- Header -->
+  <div class="header">
+    <div class="logo">DATABEND</div>
+    <div class="header-right">
+      <span id="status">Ready</span>
+    </div>
+  </div>
+
+  <!-- Main -->
+  <div class="main">
+    <!-- Canvas -->
+    <div class="canvas-area">
+      <canvas id="canvas"></canvas>
+    </div>
+
+    <!-- Panel -->
+    <div class="panel">
+      <div class="panel-header">Controls</div>
+
+      <div class="panel-content">
+        <!-- File -->
+        <div class="section">
+          <div class="section-title">File</div>
+          <button class="btn" id="loadBtn" style="width:100%">Load Audio</button>
+          <div class="display" id="fileInfo" style="margin-top:8px">No file loaded</div>
+        </div>
+
+        <!-- Databend -->
+        <div class="section">
+          <div class="section-title">Databend</div>
+
+          <div class="control">
+            <label class="control-label">Intensity</label>
+            <div class="control-value"><span id="intensityVal">50</span>%</div>
+            <input type="range" id="intensity" min="0" max="100" value="50">
+          </div>
+
+          <div class="btn-group">
+            <button class="btn" id="bitcrushBtn">BitCrush</button>
+            <button class="btn" id="foldBtn">Fold</button>
+          </div>
+          <div class="btn-group" style="margin-top:8px">
+            <button class="btn" id="shiftBtn">Shift</button>
+            <button class="btn" id="invertBtn">Invert</button>
+          </div>
+          <div class="btn-group" style="margin-top:8px">
+            <button class="btn" id="randomBtn">Random</button>
+            <button class="btn btn-danger" id="corruptBtn">Corrupt</button>
+          </div>
+        </div>
+
+        <!-- Glitch -->
+        <div class="section">
+          <div class="section-title">Glitch</div>
+
+          <div class="control">
+            <label class="control-label">Chunk Size</label>
+            <input type="number" id="chunkSize" value="512" min="4" step="4">
+          </div>
+
+          <div class="btn-group">
+            <button class="btn" id="granularBtn">Granular</button>
+            <button class="btn" id="stutterBtn">Stutter</button>
+          </div>
+          <div class="btn-group" style="margin-top:8px">
+            <button class="btn" id="reverseBtn">Reverse</button>
+            <button class="btn" id="scrambleBtn">Scramble</button>
+          </div>
+        </div>
+
+        <!-- History -->
+        <div class="section">
+          <div class="section-title">History</div>
+          <div class="btn-group">
+            <button class="btn btn-secondary" id="undoBtn">Undo</button>
+            <button class="btn btn-secondary" id="redoBtn">Redo</button>
+          </div>
+          <button class="btn btn-secondary" id="resetBtn" style="width:100%;margin-top:6px">Reset</button>
+        </div>
+      </div>
+
+      <div class="panel-footer">
+        <button class="footer-btn primary" id="playBtn">Play</button>
+        <button class="footer-btn" id="stopBtn">Stop</button>
+        <button class="footer-btn" id="exportBtn">Export</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <div class="header">
+    <div id="duration">0.00s</div>
+    <div style="margin-left:auto;font-size:11px;color:#666">DATABEND - Audio Destruction Tool</div>
+  </div>
+</div>
+
+<script>
+/* ======= Globals & DOM refs ======= */
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+
+const loadBtn = document.getElementById('loadBtn');
+const playBtn = document.getElementById('playBtn');
+const stopBtn = document.getElementById('stopBtn');
+const exportBtn = document.getElementById('exportBtn');
+
+const undoBtn = document.getElementById('undoBtn');
+const redoBtn = document.getElementById('redoBtn');
+const resetBtn = document.getElementById('resetBtn');
+
+const bitcrushBtn = document.getElementById('bitcrushBtn');
+const foldBtn = document.getElementById('foldBtn');
+const shiftBtn = document.getElementById('shiftBtn');
+const invertBtn = document.getElementById('invertBtn');
+const randomBtn = document.getElementById('randomBtn');
+const corruptBtn = document.getElementById('corruptBtn');
+
+const granularBtn = document.getElementById('granularBtn');
+const stutterBtn = document.getElementById('stutterBtn');
+const reverseBtn = document.getElementById('reverseBtn');
+const scrambleBtn = document.getElementById('scrambleBtn');
+
+const intensityEl = document.getElementById('intensity');
+const intensityVal = document.getElementById('intensityVal');
+const chunkSizeEl = document.getElementById('chunkSize');
+
+const statusEl = document.getElementById('status');
+const fileInfoEl = document.getElementById('fileInfo');
+const durationEl = document.getElementById('duration');
+
+/* ======= Audio state ======= */
+let audioCtx = null;
+let original = null;   // Float32Array
+let current = null;    // Float32Array
+let history = [];
+let historyIndex = -1;
+let playing = false;
+let sourceNode = null;
+
+/* ======= Init ======= */
+function init(){
+  audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  resizeCanvas();
+  window.addEventListener('resize', resizeCanvas);
+  requestAnimationFrame(drawLoop);
+  intensityEl.addEventListener('input', e => intensityVal.textContent = e.target.value);
+}
+init();
+
+/* ======= Helpers ======= */
+function setStatus(text, ms = 1200){
+  statusEl.textContent = text;
+  if(ms > 0){
+    clearTimeout(setStatus._t);
+    setStatus._t = setTimeout(()=>{ if(statusEl.textContent === text) statusEl.textContent = 'Ready'; }, ms);
+  }
+}
+
+function safeCopyFloat32(arr){
+  return arr ? arr.slice() : null;
+}
+
+/* ======= File loading ======= */
+loadBtn.onclick = () => {
+  const inp = document.createElement('input');
+  inp.type = 'file';
+  inp.accept = 'audio/*';
+  inp.onchange = async (e) => {
+    const file = e.target.files[0];
+    if(!file) return;
+    setStatus('Loading...');
+    try{
+      const ab = await file.arrayBuffer();
+      // decodeAudioData supports promises in modern browsers; fallback for older.
+      const decoded = await new Promise((resolve, reject) => {
+        audioCtx.decodeAudioData(ab.slice(0), res => resolve(res), err => reject(err));
+      });
+      const ch = decoded.numberOfChannels;
+      const len = decoded.length;
+      const samp = new Float32Array(len);
+      if(ch === 1) samp.set(decoded.getChannelData(0));
+      else {
+        const L = decoded.getChannelData(0);
+        const R = decoded.getChannelData(1);
+        for(let i = 0; i < len; i++) samp[i] = (L[i] + R[i]) * 0.5;
+      }
+      original = samp;
+      current = samp.slice();
+      history = [];
+      historyIndex = -1;
+      updateUI();
+      setStatus('Loaded');
+    } catch(err){
+      console.error('load error', err);
+      setStatus('Error loading', 2000);
+    }
+  };
+  inp.click();
+};
+
+function updateUI(){
+  if(!current) return;
+  const dur = (current.length / audioCtx.sampleRate).toFixed(2);
+  durationEl.textContent = dur + 's';
+  fileInfoEl.textContent = `${(current.length / 1000).toFixed(0)}k samples`;
+}
+
+/* ======= Conversions (stable) ======= */
+function f32ToInt16Buffer(float32){
+  const buf = new ArrayBuffer(float32.length * 2);
+  const dv = new DataView(buf);
+  let o = 0;
+  for(let i = 0; i < float32.length; i++){
+    let v = Math.max(-1, Math.min(1, float32[i]));
+    dv.setInt16(o, v < 0 ? v * 0x8000 : v * 0x7FFF, true);
+    o += 2;
+  }
+  return buf;
+}
+
+function int16BufferToF32(buf){
+  const dv = new DataView(buf);
+  const len = dv.byteLength / 2;
+  const out = new Float32Array(len);
+  let o = 0;
+  for(let i = 0; i < len; i++){
+    out[i] = dv.getInt16(o, true) / 0x7FFF;
+    o += 2;
+  }
+  return out;
+}
+
+/* ======= History / State ======= */
+function saveState(){
+  if(!current) return;
+  // trim future states
+  history = history.slice(0, historyIndex + 1);
+  history.push(current.slice());
+  historyIndex++;
+  // limit history entries
+  if(history.length > 40){
+    history.shift();
+    historyIndex--;
+  }
+  setStatus('Saved', 700);
+}
+
+undoBtn.onclick = () => {
+  if(historyIndex > 0){
+    historyIndex--;
+    current = history[historyIndex].slice();
+    updateUI();
+    setStatus('Undo');
+  } else {
+    setStatus('Nothing to undo', 600);
+  }
+};
+
+redoBtn.onclick = () => {
+  if(historyIndex < history.length - 1){
+    historyIndex++;
+    current = history[historyIndex].slice();
+    updateUI();
+    setStatus('Redo');
+  } else {
+    setStatus('Nothing to redo', 600);
+  }
+};
+
+resetBtn.onclick = () => {
+  if(!original) return setStatus('No file', 800);
+  if(confirm('Reset to original?')){
+    current = original.slice();
+    history = [];
+    historyIndex = -1;
+    updateUI();
+    setStatus('Reset');
+  }
+};
+
+/* ======= Core applybend wrapper (stable) ======= */
+function applybend(fn){
+  if(!current) {
+    setStatus('Load a file first', 800);
+    return;
+  }
+  saveState();
+  const buf = f32ToInt16Buffer(current);    // ArrayBuffer
+  const dv = new DataView(buf);
+  // call user function with DataView and byteLength
+  try {
+    fn(dv);
+  } catch(err) {
+    console.error('applybend error', err);
+  }
+  current = int16BufferToF32(buf);
+  updateUI();
+}
+
+/* ======= Databend operations (unchanged behavior) ======= */
+bitcrushBtn.onclick = () => {
+  const intensity = parseInt(intensityEl.value);
+  const bits = Math.max(1, 16 - Math.floor(intensity / 6));
+  applybend(dv => {
+    const mask = (0xFFFF << (16 - bits)) & 0xFFFF;
+    for(let i = 0; i < dv.byteLength; i += 2){
+      const v = dv.getInt16(i, true);
+      dv.setInt16(i, v & mask, true);
+    }
+  });
+};
+
+foldBtn.onclick = () => {
+  const intensity = parseInt(intensityEl.value);
+  const folds = Math.max(1, Math.floor(intensity / 10));
+  applybend(dv => {
+    for(let i = 0; i < dv.byteLength; i += 2){
+      let v = dv.getInt16(i, true);
+      for(let f = 0; f < folds; f++){
+        if(v > 0) v = 0x7FFF - v;
+        else v = -0x8000 - v;
+      }
+      dv.setInt16(i, v, true);
+    }
+  });
+};
+
+shiftBtn.onclick = () => {
+  const intensity = parseInt(intensityEl.value);
+  const shift = Math.floor(intensity / 5);
+  applybend(dv => {
+    for(let i = 0; i < dv.byteLength; i += 2){
+      let v = dv.getInt16(i, true);
+      // arithmetic shift safe-capping
+      v = Math.max(-0x8000, Math.min(0x7FFF, v << shift));
+      dv.setInt16(i, v, true);
+    }
+  });
+};
+
+invertBtn.onclick = () => {
+  const intensity = parseInt(intensityEl.value);
+  applybend(dv => {
+    const arr = new Uint8Array(dv.buffer);
+    const chance = intensity / 100;
+    for(let i = 0; i < arr.length; i++){
+      if(Math.random() < chance) arr[i] = (~arr[i]) & 0xFF;
+    }
+  });
+};
+
+randomBtn.onclick = () => {
+  const intensity = parseInt(intensityEl.value);
+  applybend(dv => {
+    const chance = intensity / 100;
+    for(let i = 0; i < dv.byteLength; i++){
+      if(Math.random() < chance) dv.setUint8(i, Math.floor(Math.random() * 256));
+    }
+  });
+};
+
+corruptBtn.onclick = () => {
+  const intensity = parseInt(intensityEl.value);
+  applybend(dv => {
+    const numCorrupt = Math.floor((dv.byteLength / 100) * intensity);
+    for(let i = 0; i < numCorrupt; i++){
+      const idx = Math.floor(Math.random() * dv.byteLength);
+      dv.setUint8(idx, Math.floor(Math.random() * 256));
+    }
+  });
+};
+
+/* ======= Glitch ops ======= */
+granularBtn.onclick = () => {
+  if(!current) return setStatus('Load a file first', 800);
+  saveState();
+  const chunk = Math.max(4, parseInt(chunkSizeEl.value) || 512);
+  const out = new Float32Array(current.length);
+  const chunks = Math.max(1, Math.floor(current.length / chunk));
+  for(let i = 0; i < current.length; i++){
+    const gIdx = Math.floor(Math.random() * chunks) * chunk;
+    out[i] = current[Math.min(gIdx + (i % chunk), current.length - 1)];
+  }
+  current = out;
+  updateUI();
+};
+
+stutterBtn.onclick = () => {
+  if(!current) return setStatus('Load a file first', 800);
+  saveState();
+  const chunk = Math.max(4, parseInt(chunkSizeEl.value) || 512);
+  const out = new Float32Array(current.length);
+  for(let i = 0; i < current.length; i++){
+    const chunkIdx = Math.floor(i / chunk);
+    const pos = i % chunk;
+    out[i] = current[Math.min(chunkIdx * chunk + pos, current.length - 1)];
+  }
+  current = out;
+  updateUI();
+};
+
+reverseBtn.onclick = () => {
+  if(!current) return setStatus('Load a file first', 800);
+  saveState();
+  current.reverse();
+  updateUI();
+};
+
+scrambleBtn.onclick = () => {
+  if(!current) return setStatus('Load a file first', 800);
+  saveState();
+  const chunk = Math.max(4, parseInt(chunkSizeEl.value) || 512);
+  const out = current.slice();
+  for(let i = 0; i < out.length; i += chunk){
+    const end = Math.min(i + chunk, out.length);
+    const section = out.slice(i, end);
+    for(let j = section.length - 1; j > 0; j--){
+      const k = Math.floor(Math.random() * (j + 1));
+      [section[j], section[k]] = [section[k], section[j]];
+    }
+    out.set(section, i);
+  }
+  current = out;
+  updateUI();
+};
+
+/* ======= Playback ======= */
+async function play(){
+  if(!current) return setStatus('Load a file first', 1000);
+  // stop previous if playing
+  if(sourceNode){
+    try{ sourceNode.stop(); } catch(e) {}
+    sourceNode.disconnect();
+    sourceNode = null;
+  }
+  if(audioCtx.state === 'suspended') await audioCtx.resume();
+  const buf = audioCtx.createBuffer(1, current.length, audioCtx.sampleRate);
+  // apply small limiter to be safe
+  const channel = buf.getChannelData(0);
+  for(let i = 0; i < current.length; i++){
+    const s = Math.max(-0.99, Math.min(0.99, current[i]));
+    channel[i] = s;
+  }
+  sourceNode = audioCtx.createBufferSource();
+  sourceNode.buffer = buf;
+  sourceNode.connect(audioCtx.destination);
+  sourceNode.onended = () => {
+    playing = false;
+    playBtn.textContent = 'Play';
+    setStatus('Playback ended');
+  };
+  sourceNode.start(0);
+  playing = true;
+  playBtn.textContent = 'Playing...';
+  setStatus('Playing', 800);
+}
+
+function stop(){
+  if(sourceNode){
+    try{ sourceNode.stop(); } catch(e) {}
+    sourceNode.disconnect();
+    sourceNode = null;
+  }
+  playing = false;
+  playBtn.textContent = 'Play';
+  setStatus('Stopped', 600);
+}
+
+playBtn.onclick = () => { if(!playing) play(); else { stop(); } };
+stopBtn.onclick = stop;
+
+/* ======= Export ======= */
+exportBtn.onclick = () => {
+  if(!current) return setStatus('Load a file first', 800);
+  const wav = writeWAV(current, audioCtx.sampleRate);
+  const url = URL.createObjectURL(wav);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'databend.wav';
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+  setStatus('Exported', 1000);
+};
+
+function floatTo16(arr){
+  const buf = new ArrayBuffer(arr.length*2);
+  const dv = new DataView(buf);
+  let o = 0;
+  for(let i = 0; i < arr.length; i++){
+    let s = Math.max(-1, Math.min(1, arr[i]));
+    dv.setInt16(o, s < 0 ? s * 0x8000 : s * 0x7FFF, true);
+    o += 2;
+  }
+  return buf;
+}
+
+function writeWAV(float32Array, sr){
+  const wavBuffer = floatTo16(float32Array);
+  const buffer = new ArrayBuffer(44 + wavBuffer.byteLength);
+  const view = new DataView(buffer);
+  const writeString = (offset, string) => {
+    for(let i = 0; i < string.length; i++){
+      view.setUint8(offset + i, string.charCodeAt(i));
+    }
+  };
+  writeString(0, 'RIFF');
+  view.setUint32(4, 36 + wavBuffer.byteLength, true);
+  writeString(8, 'WAVE');
+  writeString(12, 'fmt ');
+  view.setUint32(16, 16, true);
+  view.setUint16(20, 1, true);
+  view.setUint16(22, 1, true);
+  view.setUint32(24, sr, true);
+  view.setUint32(28, sr * 2, true);
+  view.setUint16(32, 2, true);
+  view.setUint16(34, 16, true);
+  writeString(36, 'data');
+  view.setUint32(40, wavBuffer.byteLength, true);
+  const pcmView = new Uint8Array(wavBuffer);
+  for(let i = 0; i < pcmView.length; i++){
+    view.setUint8(44 + i, pcmView[i]);
+  }
+  return new Blob([view], {type:'audio/wav'});
+}
+
+/* ======= Drawing waveform ======= */
+function resizeCanvas(){
+  // reset transform so scaling doesn't accumulate
+  ctx.setTransform(1,0,0,1,0,0);
+  canvas.width = canvas.offsetWidth * devicePixelRatio;
+  canvas.height = canvas.offsetHeight * devicePixelRatio;
+  ctx.scale(devicePixelRatio, devicePixelRatio);
+}
+
+let lastDrawTime = 0;
+function drawLoop(ts){
+  // throttle draw to ~30-60fps if necessary
+  if(!lastDrawTime || ts - lastDrawTime > 16){
+    drawWaveform();
+    lastDrawTime = ts;
+  }
+  requestAnimationFrame(drawLoop);
+}
+
+function drawWaveform(){
+  const w = canvas.width / devicePixelRatio;
+  const h = canvas.height / devicePixelRatio;
+  ctx.clearRect(0,0,w,h);
+  ctx.fillStyle = '#0a0a0a';
+  ctx.fillRect(0,0,w,h);
+  if(!current) return;
+  ctx.strokeStyle = '#0d7377';
+  ctx.lineWidth = 1;
+  const step = Math.max(1, Math.floor(current.length / w));
+  for(let x = 0; x < w; x++){
+    const i = Math.floor((x * current.length) / w);
+    let min = 1, max = -1;
+    for(let j = 0; j < step && i + j < current.length; j++){
+      const v = current[i + j];
+      if(v < min) min = v;
+      if(v > max) max = v;
+    }
+    const y1 = ((max + 1) / 2) * h;
+    const y2 = ((min + 1) / 2) * h;
+    ctx.fillStyle = '#0d7377';
+    ctx.fillRect(x, y1, 1, Math.max(1, y2 - y1));
+  }
+}
+
+/* ======= Keyboard shortcuts ======= */
+document.addEventListener('keydown', async (e) => {
+  // prevent scrolling on space
+  if(e.code === 'Space') e.preventDefault();
+
+  const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
+  const cmd = isMac ? e.metaKey : e.ctrlKey;
+
+  // Undo: Cmd/Ctrl + Z
+  if (cmd && e.key.toLowerCase() === 'z') {
+    undoBtn.click();
+    return;
+  }
+
+  // Redo: Cmd/Ctrl + Y
+  if (cmd && e.key.toLowerCase() === 'y') {
+    redoBtn.click();
+    return;
+  }
+
+  // Export: Cmd/Ctrl + S
+  if (cmd && (e.key.toLowerCase() === 's')) {
+    e.preventDefault();
+    exportBtn.click();
+    return;
+  }
+
+  // Space: play/stop toggle
+  if (e.code === 'Space') {
+    if (playing) stop();
+    else await play();
+    return;
+  }
+});
+
+</script>
+</body>
+</html>
